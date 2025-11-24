@@ -1,50 +1,22 @@
 <!doctype html>
 <html lang="es">
-	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width,initial-scale=1" />
-		<title>SelfDraw — NeuroArquitectura</title>
-		<style>
-			body { font-family: system-ui, Arial, sans-serif; margin: 16px; }
-			#app { display: grid; grid-template-columns: 1fr 420px; gap: 16px; }
-			.panel { border: 1px solid #ddd; padding: 12px; border-radius: 8px; }
-			#chat { height: 70vh; overflow:auto; display:flex; flex-direction:column; gap:8px; }
-			.msg.user { align-self:flex-end; background:#e6f7ff; padding:8px; border-radius:8px; }
-			.msg.assistant { align-self:flex-start; background:#f1f1f1; padding:8px; border-radius:8px; }
-			#canvasContainer { height: 60vh; background: #fff; display:flex; align-items:center; justify-content:center; }
-			button { padding:8px 12px; border-radius:6px; }
-		</style>
-	</head>
-	<body>
-		<h1>SelfDraw — NeuroArquitectura (Demo)</h1>
-		<div id="app">
-			<div class="panel">
-				<div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
-					<button id="startBtn">Iniciar sesión</button>
-					<button id="detectStateBtn">Detectar estado UI</button>
-					<span id="sessionId" style="color:#666;font-size:0.9rem"></span>
-				</div>
 
-				<div id="chat" aria-live="polite"></div>
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width,initial-scale=1" />
+	<title>SelfDraw — NeuroArquitectura</title>
+	<style>
+		body {
+			margin: 0;
+			padding: 0;
+			overflow: hidden;
+		}
+	</style>
+</head>
 
-				<form id="inputForm" style="display:flex;gap:8px;margin-top:8px;">
-					<input id="textIn" placeholder="Escribe aquí..." style="flex:1;padding:8px;border-radius:6px;border:1px solid #ccc" />
-					<button type="submit">Enviar</button>
-				</form>
-			</div>
+<body>
+	<app-root></app-root>
+	<script type="module" src="./app.js"></script>
+</body>
 
-			<div class="panel">
-				<h3>Canvas de expresión</h3>
-				<div id="canvasContainer"></div>
-				<div style="display:flex;gap:8px;margin-top:8px;">
-					<button id="startDrawBtn">Mostrar canvas</button>
-					<button id="clearBtn">Limpiar</button>
-					<button id="finishDrawBtn">Terminar dibujo</button>
-				</div>
-				<div style="margin-top:12px;color:#666;font-size:0.9rem">Etiqueta de interfaz: <span id="stateTag">(sin detectar)</span></div>
-			</div>
-		</div>
-
-		<script type="module" src="./app.js"></script>
-	</body>
 </html>
