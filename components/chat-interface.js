@@ -55,12 +55,42 @@ export class ChatInterface extends HTMLElement {
             this.dispatchEvent(new CustomEvent('state-change', {
                 detail: { state: 'anxiety' }, bubbles: true, composed: true
             }));
-            cleanResponse = responseText.replace('[ESTADO: ALTA_ANSIEDAD]', '');
+            cleanResponse = cleanResponse.replace('[ESTADO: ALTA_ANSIEDAD]', '');
         } else if (responseText.includes('[ESTADO: BAJA_MOTIVACION]')) {
             this.dispatchEvent(new CustomEvent('state-change', {
                 detail: { state: 'motivation' }, bubbles: true, composed: true
             }));
-            cleanResponse = responseText.replace('[ESTADO: BAJA_MOTIVACION]', '');
+            cleanResponse = cleanResponse.replace('[ESTADO: BAJA_MOTIVACION]', '');
+        }
+
+        // Check for canvas action
+        if (responseText.includes('[ACCION: MOSTRAR_CANVAS]')) {
+            let colors = [];
+            let guide = null;
+
+            // Extract colors
+            const colorMatch = responseText.match(/\[COLORES: (.*?)\]/);
+            if (colorMatch) {
+                try {
+                    colors = JSON.parse(colorMatch[1]);
+                } catch (e) { console.error('Error parsing colors', e); }
+                cleanResponse = cleanResponse.replace(colorMatch[0], '');
+            }
+
+            // Extract guide
+            const guideMatch = responseText.match(/\[GUIA: (.*?)\]/);
+            if (guideMatch) {
+                try {
+                    guide = JSON.parse(guideMatch[1]);
+                } catch (e) { console.error('Error parsing guide', e); }
+                cleanResponse = cleanResponse.replace(guideMatch[0], '');
+            }
+
+            this.dispatchEvent(new CustomEvent('show-canvas', {
+                detail: { colors, guide },
+                bubbles: true, composed: true
+            }));
+            cleanResponse = cleanResponse.replace('[ACCION: MOSTRAR_CANVAS]', '');
         }
 
         this.addMessage('assistant', cleanResponse.trim());
@@ -108,6 +138,13 @@ export class ChatInterface extends HTMLElement {
           border-radius: 16px;
           overflow: hidden;
           box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+          transition: all 0.5s ease;
+        }
+        :host(.minimized) {
+          height: 300px; /* Fixed height when minimized */
+        }
+        :host(.minimized) form {
+          display: none; /* Hide input when minimized */
         }
         #chat {
           flex: 1;
