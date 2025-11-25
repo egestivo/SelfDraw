@@ -142,7 +142,8 @@ export class ChatInterface extends HTMLElement {
 
     // Check for test action
     if (responseText.includes('[ACCION: MOSTRAR_TEST]')) {
-      const testMatch = responseText.match(/\[TEST: (.*?)\]/);
+      // Use [\s\S]*? to match across newlines
+      const testMatch = responseText.match(/\[TEST: ([\s\S]*?)\]/);
       if (testMatch) {
         try {
           const testData = JSON.parse(testMatch[1]);
