@@ -140,9 +140,8 @@ export class ChatInterface extends HTMLElement {
       cleanResponse = cleanResponse.replace('[ACCION: MOSTRAR_CANVAS]', '');
     }
 
-    // Check for test action
+    // Check for test action (Standard Tag)
     if (responseText.includes('[ACCION: MOSTRAR_TEST]')) {
-      // Use [\s\S]*? to match across newlines
       const testMatch = responseText.match(/\[TEST: ([\s\S]*?)\]/);
       if (testMatch) {
         try {
@@ -152,6 +151,22 @@ export class ChatInterface extends HTMLElement {
         } catch (e) { console.error('Error parsing test data', e); }
       }
       cleanResponse = cleanResponse.replace('[ACCION: MOSTRAR_TEST]', '');
+    }
+    // Fallback: Check for raw JSON that looks like a test (Gemini hallucination)
+    else {
+      const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/);
+      if (jsonMatch) {
+        try {
+          const potentialJson = JSON.parse(jsonMatch[1]);
+          // Check if it has test-like properties
+          if (potentialJson.preguntas || potentialJson.questions || potentialJson.titulo || potentialJson.title) {
+            this.showTestForm(potentialJson);
+            cleanResponse = cleanResponse.replace(jsonMatch[0], ''); // Remove the JSON block
+          }
+        } catch (e) {
+          // Not valid JSON or not a test, ignore
+        }
+      }
     }
 
     this.addMessage('assistant', cleanResponse.trim());

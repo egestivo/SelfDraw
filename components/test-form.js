@@ -5,8 +5,28 @@ export class TestForm extends HTMLElement {
     }
 
     set data(testData) {
-        this._data = testData;
+        this._data = this.normalizeData(testData);
         this.render();
+    }
+
+    normalizeData(data) {
+        // Handle different schemas (Gemini hallucination fallback)
+        const questions = data.questions || data.preguntas || [];
+        return {
+            id: data.id || 'test_' + Date.now(),
+            title: data.title || data.titulo || 'Cuestionario',
+            questions: questions.map((q, i) => ({
+                id: q.id || `q${i}`,
+                text: q.text || q.texto || q.pregunta,
+                type: (q.type || q.tipo) === 'radio' ? 'choice' : (q.type || q.tipo || 'text'),
+                options: (q.options || q.opciones || []).map(opt => {
+                    if (typeof opt === 'object') {
+                        return { label: opt.label || opt.texto || opt.text, value: opt.value || opt.valor || opt.id };
+                    }
+                    return { label: opt, value: opt };
+                })
+            }))
+        };
     }
 
     connectedCallback() {
