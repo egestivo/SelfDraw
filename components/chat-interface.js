@@ -1,4 +1,5 @@
 import './test-form.js';
+import { TESTS } from './tests/test-library.js';
 
 export class ChatInterface extends HTMLElement {
   constructor() {
@@ -39,7 +40,7 @@ export class ChatInterface extends HTMLElement {
     this.shadowRoot.addEventListener('test-submit', async (e) => {
       const { testId, answers } = e.detail;
 
-      // Remove the form (or disable it) - for now let's remove it and show a summary
+      // Remove the form
       const testForm = this.shadowRoot.querySelector('test-form');
       if (testForm) testForm.remove();
 
@@ -144,11 +145,21 @@ export class ChatInterface extends HTMLElement {
     if (responseText.includes('[ACCION: MOSTRAR_TEST]')) {
       const testMatch = responseText.match(/\[TEST: ([\s\S]*?)\]/);
       if (testMatch) {
-        try {
-          const testData = JSON.parse(testMatch[1]);
-          this.showTestForm(testData);
-          cleanResponse = cleanResponse.replace(testMatch[0], '');
-        } catch (e) { console.error('Error parsing test data', e); }
+        const testContent = testMatch[1].trim();
+
+        // Check if it's a known test ID
+        if (TESTS[testContent.toLowerCase()]) {
+          this.showTestForm(TESTS[testContent.toLowerCase()]);
+        } else {
+          // Try to parse as JSON (fallback for custom/generated tests)
+          try {
+            const testData = JSON.parse(testContent);
+            this.showTestForm(testData);
+          } catch (e) {
+            console.error('Error parsing test data', e);
+          }
+        }
+        cleanResponse = cleanResponse.replace(testMatch[0], '');
       }
       cleanResponse = cleanResponse.replace('[ACCION: MOSTRAR_TEST]', '');
     }
@@ -241,10 +252,10 @@ export class ChatInterface extends HTMLElement {
           transition: all 0.5s ease;
         }
         :host(.minimized) {
-          height: 300px; /* Fixed height when minimized */
+          height: 300px;
         }
         :host(.minimized) form {
-          display: none; /* Hide input when minimized */
+          display: none;
         }
         #chat {
           flex: 1;
