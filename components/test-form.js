@@ -10,22 +10,56 @@ export class TestForm extends HTMLElement {
     }
 
     normalizeData(data) {
-        // Handle different schemas (Gemini hallucination fallback)
-        const questions = data.questions || data.preguntas || [];
-        return {
-            id: data.id || 'test_' + Date.now(),
-            title: data.title || data.titulo || 'Cuestionario',
-            questions: questions.map((q, i) => ({
-                id: q.id || `q${i}`,
-                text: q.text || q.texto || q.pregunta,
-                type: (q.type || q.tipo) === 'radio' ? 'choice' : (q.type || q.tipo || 'text'),
-                options: (q.options || q.opciones || []).map(opt => {
+        // 1. Identify the array of questions
+        const questionsRaw = data.questions || data.preguntas || data.items || [];
+
+        // 2. Map to internal schema
+        const questions = questionsRaw.map((q, i) => {
+            // ID
+            const id = q.id || q.question_id || q.identificador || `q${i}`;
+
+            // Text
+            const text = q.text || q.texto || q.question_text || q.pregunta || q.enunciado || "Pregunta sin texto";
+
+            // Type
+            let type = 'text'; // Default
+            const rawType = (q.type || q.tipo || q.response_type || '').toLowerCase();
+            if (rawType.includes('choice') || rawType.includes('radio') || rawType.includes('seleccion') || rawType.includes('opcion')) {
+                type = 'choice';
+            } else if (rawType.includes('scale') || rawType.includes('escala')) {
+                type = 'scale';
+            }
+
+            // Options
+            let options = [];
+            const rawOptions = q.options || q.opciones || q.respuestas || [];
+
+            // Handle scale min/max if no explicit options
+            if (type === 'scale' && rawOptions.length === 0 && (q.min_value || q.min)) {
+                const min = q.min_value || q.min || 1;
+                const max = q.max_value || q.max || 5;
+                for (let j = min; j <= max; j++) {
+                    options.push({ label: j.toString(), value: j.toString() });
+                }
+            } else {
+                options = rawOptions.map(opt => {
                     if (typeof opt === 'object') {
-                        return { label: opt.label || opt.texto || opt.text, value: opt.value || opt.valor || opt.id };
+                        return {
+                            label: opt.label || opt.texto || opt.text || opt.name || JSON.stringify(opt),
+                            value: opt.value || opt.valor || opt.id || opt.label || opt.texto
+                        };
                     }
-                    return { label: opt, value: opt };
-                })
-            }))
+                    return { label: String(opt), value: String(opt) };
+                });
+            }
+
+            return { id, text, type, options };
+        });
+
+        return {
+            id: data.id || data.test_id || data.test_name || 'test_' + Date.now(),
+            title: data.title || data.titulo || data.test_name || data.nombre || 'Evaluación',
+            questions: questions
         };
     }
 
