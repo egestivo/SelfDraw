@@ -4,13 +4,23 @@
     "description": "Asistente de IA para regulación emocional con terapia de arte",
     "main": "app.js",
     "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "dev": "netlify dev --offline",
+        "build": "echo 'No build step required'",
+        "start": "netlify dev"
     },
-    "keywords": [],
+    "keywords": [
+        "ai",
+        "mental-health",
+        "art-therapy",
+        "gemini"
+    ],
     "author": "",
     "license": "ISC",
     "dependencies": {
-        "@google/generative-ai": "^0.1.0",
+        "@google/generative-ai": "^0.21.0",
         "mongodb": "^6.3.0"
+    },
+    "devDependencies": {
+        "netlify-cli": "^17.0.0"
     }
 }

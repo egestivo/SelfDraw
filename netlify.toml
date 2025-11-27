@@ -1,6 +1,16 @@
 [build]
-  functions = "netlify/functions"
+  command = "echo 'No build required'"
   publish = "."
+  functions = "netlify/functions"
 
 [dev]
+
+  port = 1000
+  publish = "."
+  autoLaunch = false
   framework = "#static"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
