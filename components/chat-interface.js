@@ -70,6 +70,18 @@ export class ChatInterface extends HTMLElement {
     });
   }
 
+  async sendSystemMessage(text) {
+    this.setLoading(true);
+    try {
+      const responseText = await this.sendMessageToBackend(text);
+      this.handleResponse(responseText);
+    } catch (error) {
+      this.addMessage('assistant', 'Error procesando evento del sistema.');
+    } finally {
+      this.setLoading(false);
+    }
+  }
+
   async sendMessageToBackend(message) {
     const response = await fetch('/.netlify/functions/chat', {
       method: 'POST',
@@ -142,45 +154,28 @@ export class ChatInterface extends HTMLElement {
     }
 
     // Check for test action (Standard Tag)
+    let testToRender = null;
     if (responseText.includes('[ACCION: MOSTRAR_TEST]')) {
       const testMatch = responseText.match(/\[TEST: ([\s\S]*?)\]/);
       if (testMatch) {
         const testContent = testMatch[1].trim();
-
-        // Check if it's a known test ID
         if (TESTS[testContent.toLowerCase()]) {
-          this.showTestForm(TESTS[testContent.toLowerCase()]);
-        } else {
-          // Try to parse as JSON (fallback for custom/generated tests)
-          try {
-            const testData = JSON.parse(testContent);
-            this.showTestForm(testData);
-          } catch (e) {
-            console.error('Error parsing test data', e);
-          }
+          testToRender = TESTS[testContent.toLowerCase()];
         }
         cleanResponse = cleanResponse.replace(testMatch[0], '');
       }
       cleanResponse = cleanResponse.replace('[ACCION: MOSTRAR_TEST]', '');
     }
-    // Fallback: Check for raw JSON that looks like a test (Gemini hallucination)
-    else {
-      const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/);
-      if (jsonMatch) {
-        try {
-          const potentialJson = JSON.parse(jsonMatch[1]);
-          // Check if it has test-like properties
-          if (potentialJson.preguntas || potentialJson.questions || potentialJson.titulo || potentialJson.title) {
-            this.showTestForm(potentialJson);
-            cleanResponse = cleanResponse.replace(jsonMatch[0], ''); // Remove the JSON block
-          }
-        } catch (e) {
-          // Not valid JSON or not a test, ignore
-        }
-      }
+
+    // Add the cleaned text message FIRST
+    if (cleanResponse.trim()) {
+      this.addMessage('assistant', cleanResponse.trim());
     }
 
-    this.addMessage('assistant', cleanResponse.trim());
+    // THEN render the test if needed
+    if (testToRender) {
+      this.showTestForm(testToRender);
+    }
 
     // Update history
     this.history.push({ role: 'user', parts: [{ text: this.lastUserMessage }] });

@@ -1,0 +1,51 @@
+:root {
+  /* Default / Neutral */
+  --bg-gradient-neutral: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  --primary-neutral: #607d8b;
+  --accent-neutral: #90a4ae;
+
+  /* Anxiety (Calming Cool Colors - More Vibrant) */
+  --bg-gradient-anxiety: linear-gradient(135deg, #b3e5fc 0%, #c5cae9 100%);
+  --primary-anxiety: #29b6f6;
+  --accent-anxiety: #4fc3f7;
+
+  /* Motivation (Energetic Warm Colors - More Vibrant) */
+  --bg-gradient-motivation: linear-gradient(135deg, #ffe0b2 0%, #ffcc80 100%);
+  --primary-motivation: #ff9800;
+  --accent-motivation: #ffb74d;
+
+  /* Sadness (Comforting Warm/Earth Tones - More Vibrant) */
+  --bg-gradient-sadness: linear-gradient(135deg, #ffecb3 0%, #ffccbc 100%);
+  --primary-sadness: #ff7043;
+  --accent-sadness: #ff8a65;
+
+  /* Stress (Soothing Greens - More Vibrant) */
+  --bg-gradient-stress: linear-gradient(135deg, #c8e6c9 0%, #a5d6a7 100%);
+  --primary-stress: #4caf50;
+  --accent-stress: #81c784;
+}
+
+.theme-neutral {
+  background: var(--bg-gradient-neutral) !important;
+  --current-primary: var(--primary-neutral);
+}
+
+.theme-anxiety {
+  background: var(--bg-gradient-anxiety) !important;
+  --current-primary: var(--primary-anxiety);
+}
+
+.theme-motivation {
+  background: var(--bg-gradient-motivation) !important;
+  --current-primary: var(--primary-motivation);
+}
+
+.theme-sadness {
+  background: var(--bg-gradient-sadness) !important;
+  --current-primary: var(--primary-sadness);
+}
+
+.theme-stress {
+  background: var(--bg-gradient-stress) !important;
+  --current-primary: var(--primary-stress);
+}

@@ -1,100 +1,126 @@
 import './chat-interface.js';
 import './drawing-canvas.js';
 import './color-palette.js';
+import './ambient-background.js';
 
 export class AppRoot extends HTMLElement {
-    constructor() {
-        super();
-        this.attachShadow({ mode: 'open' });
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  connectedCallback() {
+    this.render();
+    this.addEventListener('state-change', this.handleStateChange.bind(this));
+    this.addEventListener('show-canvas', this.handleShowCanvas.bind(this));
+  }
+
+  handleStateChange(e) {
+    const { state } = e.detail;
+    const container = this.shadowRoot.getElementById('app-container');
+
+    // Remove existing state classes
+    container.classList.remove('theme-anxiety', 'theme-motivation', 'theme-neutral');
+
+    if (state === 'anxiety') {
+      container.classList.add('theme-anxiety');
+    } else if (state === 'motivation') {
+      container.classList.add('theme-motivation');
+    } else {
+      container.classList.add('theme-neutral');
     }
+  }
 
-    connectedCallback() {
-        this.render();
-        this.addEventListener('state-change', this.handleStateChange.bind(this));
-        this.addEventListener('show-canvas', this.handleShowCanvas.bind(this));
+  handleShowCanvas(e) {
+    const { colors, guide } = e.detail;
+    const content = this.shadowRoot.querySelector('.main-content');
+    const chatInterface = this.shadowRoot.querySelector('chat-interface');
+
+    // 1. Change Layout
+    content.classList.add('with-canvas');
+
+    // 2. Minimize Chat
+    chatInterface.classList.add('minimized');
+
+    // 3. Create Left Column Container (for Chat + Palette)
+    // We need to restructure the DOM slightly. 
+    // Current: .main-content > chat-interface
+    // Target: .main-content > .left-col (chat + palette) + .right-col (canvas)
+
+    // Create containers
+    const leftCol = document.createElement('div');
+    leftCol.className = 'left-col';
+
+    const rightCol = document.createElement('div');
+    rightCol.className = 'right-col';
+
+    // Move chat to left col
+    chatInterface.remove();
+    leftCol.appendChild(chatInterface);
+
+    // Create Palette and add to left col
+    const palette = document.createElement('color-palette');
+    if (colors && colors.length > 0) {
+      palette.setAttribute('colors', JSON.stringify(colors));
     }
+    leftCol.appendChild(palette);
 
-    handleStateChange(e) {
-        const { state } = e.detail;
-        const container = this.shadowRoot.getElementById('app-container');
+    // Create Canvas and add to right col
+    const canvas = document.createElement('drawing-canvas');
+    rightCol.appendChild(canvas);
 
-        // Remove existing state classes
-        container.classList.remove('state-anxiety', 'state-motivation');
+    // Append new cols to main content
+    content.appendChild(leftCol);
+    content.appendChild(rightCol);
 
-        if (state === 'anxiety') {
-            container.classList.add('state-anxiety');
-            this.updateColors('#4a90e2', '#e0f7fa', '#e8eaf6');
-        } else if (state === 'motivation') {
-            container.classList.add('state-motivation');
-            this.updateColors('#ff9800', '#fff3e0', '#ffe0b2');
-        }
+    // Wire up events
+    palette.addEventListener('color-selected', (evt) => {
+      canvas.setColor(evt.detail.color);
+    });
+
+    // Handle Finish Drawing
+    canvas.addEventListener('finish-drawing', () => {
+      const chat = this.shadowRoot.querySelector('chat-interface');
+      if (chat) {
+        chat.sendSystemMessage("[SISTEMA: El usuario ha presionado 'Terminar Dibujo'. Inicia la Fase 4: Checkout.]");
+        // Restore chat size
+        chat.classList.remove('minimized');
+      }
+
+      // Remove Palette
+      const palette = this.shadowRoot.querySelector('color-palette');
+      if (palette) palette.remove();
+
+      // Set Canvas to ReadOnly
+      canvas.setReadOnly(true);
+
+      // Adjust Layout to 50/50
+      const leftCol = this.shadowRoot.querySelector('.left-col');
+      const rightCol = this.shadowRoot.querySelector('.right-col');
+      if (leftCol && rightCol) {
+        leftCol.style.flex = '1';
+        rightCol.style.flex = '1';
+      }
+    });
+
+    // Render guide if exists
+    // We need to wait for canvas to be connected and resized
+    if (guide) {
+      setTimeout(() => {
+        canvas.renderGuide(guide);
+      }, 100);
     }
+  }
 
-    handleShowCanvas(e) {
-        const { colors, guide } = e.detail;
-        const content = this.shadowRoot.querySelector('.main-content');
-        const chatInterface = this.shadowRoot.querySelector('chat-interface');
+  updateColors(primary, bg1, bg2) {
+    const container = this.shadowRoot.getElementById('app-container');
+    container.style.setProperty('--primary-color', primary);
+    container.style.setProperty('--bg-color-1', bg1);
+    container.style.setProperty('--bg-color-2', bg2);
+  }
 
-        // 1. Change Layout
-        content.classList.add('with-canvas');
-
-        // 2. Minimize Chat
-        chatInterface.classList.add('minimized');
-
-        // 3. Create Left Column Container (for Chat + Palette)
-        // We need to restructure the DOM slightly. 
-        // Current: .main-content > chat-interface
-        // Target: .main-content > .left-col (chat + palette) + .right-col (canvas)
-
-        // Create containers
-        const leftCol = document.createElement('div');
-        leftCol.className = 'left-col';
-
-        const rightCol = document.createElement('div');
-        rightCol.className = 'right-col';
-
-        // Move chat to left col
-        chatInterface.remove();
-        leftCol.appendChild(chatInterface);
-
-        // Create Palette and add to left col
-        const palette = document.createElement('color-palette');
-        if (colors && colors.length > 0) {
-            palette.setAttribute('colors', JSON.stringify(colors));
-        }
-        leftCol.appendChild(palette);
-
-        // Create Canvas and add to right col
-        const canvas = document.createElement('drawing-canvas');
-        rightCol.appendChild(canvas);
-
-        // Append new cols to main content
-        content.appendChild(leftCol);
-        content.appendChild(rightCol);
-
-        // Wire up events
-        palette.addEventListener('color-selected', (evt) => {
-            canvas.setColor(evt.detail.color);
-        });
-
-        // Render guide if exists
-        // We need to wait for canvas to be connected and resized
-        if (guide) {
-            setTimeout(() => {
-                canvas.renderGuide(guide);
-            }, 100);
-        }
-    }
-
-    updateColors(primary, bg1, bg2) {
-        const container = this.shadowRoot.getElementById('app-container');
-        container.style.setProperty('--primary-color', primary);
-        container.style.setProperty('--bg-color-1', bg1);
-        container.style.setProperty('--bg-color-2', bg2);
-    }
-
-    render() {
-        this.shadowRoot.innerHTML = `
+  render() {
+    this.shadowRoot.innerHTML = `
       <style>
         :host {
           display: block;
@@ -102,17 +128,19 @@ export class AppRoot extends HTMLElement {
           width: 100vw;
           margin: 0;
           font-family: 'Inter', system-ui, sans-serif;
-          --primary-color: #007bff;
+          --primary-color: var(--current-primary, #007bff);
           --bg-color-1: #f5f7fa;
           --bg-color-2: #c3cfe2;
         }
+        @import url('assets/css/themes.css');
+
         #app-container {
           height: 100%;
           width: 100%;
           display: flex;
           justify-content: center;
           align-items: center;
-          background: linear-gradient(135deg, var(--bg-color-1) 0%, var(--bg-color-2) 100%);
+          background: var(--bg-gradient-neutral); /* Default */
           transition: background 2s ease;
           position: relative;
           overflow: hidden;
@@ -203,15 +231,14 @@ export class AppRoot extends HTMLElement {
         }
       </style>
       <div id="app-container">
-        <div class="blob blob-1"></div>
-        <div class="blob blob-2"></div>
+        <ambient-background></ambient-background>
         
         <div class="main-content">
           <chat-interface></chat-interface>
         </div>
       </div>
     `;
-    }
+  }
 }
 
 customElements.define('app-root', AppRoot);

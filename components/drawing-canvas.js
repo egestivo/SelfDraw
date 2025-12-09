@@ -44,17 +44,39 @@ export class DrawingCanvas extends HTMLElement {
             this.draw(e.touches[0]);
         });
         this.canvas.addEventListener('touchend', () => this.stopDrawing());
+
+        // Finish Button
+        this.shadowRoot.getElementById('finishBtn').addEventListener('click', () => {
+            this.dispatchEvent(new CustomEvent('finish-drawing', {
+                bubbles: true,
+                composed: true
+            }));
+        });
+    }
+
+    setReadOnly(readOnly) {
+        this.isReadOnly = readOnly;
+        if (readOnly) {
+            this.canvas.style.cursor = 'default';
+            const btn = this.shadowRoot.getElementById('finishBtn');
+            if (btn) btn.style.display = 'none';
+        } else {
+            this.canvas.style.cursor = 'crosshair';
+        }
     }
 
     getPoint(e) {
         const rect = this.canvas.getBoundingClientRect();
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
         return {
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top
+            x: (e.clientX - rect.left) * scaleX,
+            y: (e.clientY - rect.top) * scaleY
         };
     }
 
     startDrawing(e) {
+        if (this.isReadOnly) return;
         this.isDrawing = true;
         const { x, y } = this.getPoint(e);
         this.ctx.beginPath();
@@ -133,6 +155,31 @@ export class DrawingCanvas extends HTMLElement {
         }
       </style>
       <canvas id="canvas"></canvas>
+      <button id="finishBtn">Terminar Dibujo</button>
+      <style>
+        #finishBtn {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 24px;
+            background: var(--primary-color, #007bff);
+            color: white;
+            border: none;
+            border-radius: 24px;
+            font-family: inherit;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            transition: transform 0.2s, background 0.2s;
+        }
+        #finishBtn:hover {
+            transform: translateY(-2px);
+            background: var(--primary-color-dark, #0056b3);
+        }
+        #finishBtn:active {
+            transform: translateY(0);
+        }
+      </style>
     `;
     }
 }

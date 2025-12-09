@@ -1,37 +1,41 @@
-# Walkthrough - Formulario de Tests Integrado
+# SelfDraw - Walkthrough & Verification
 
-Se ha implementado un nuevo sistema para mostrar formularios interactivos dentro del chat cuando el asistente (Gemini) necesita realizar una evaluación (Fase 1 o Fase 4).
+## 1. Local Setup
+- Run `start.bat` to launch the local server.
+- Access the app at `http://localhost:8888`.
 
-## Cambios Realizados
+## 2. Privacy Verification
+- **Requirement**: Chat history must NOT be saved.
+- **Test**: Send messages in the chat. Check your MongoDB `chats` collection. It should NOT receive new entries.
+- **Test**: Complete a test form. Check MongoDB `test_results`. It SHOULD receive the entry.
 
-### 1. Nuevo Componente `test-form.js`
-- Renderiza formularios dinámicos basados en JSON.
-- Soporta preguntas de escala (botones) y texto libre.
-- Valida que todas las preguntas sean respondidas antes de enviar.
+## 3. Interaction Flow Verification
 
-### 2. Actualización de `chat-interface.js`
-- Detecta la etiqueta `[ACCION: MOSTRAR_TEST]` en la respuesta de la IA.
-- Muestra el componente `test-form` en el chat.
-- **Deshabilita el input principal** mientras el formulario está activo.
-- Al enviar el formulario:
-    - Guarda los resultados en MongoDB.
-    - Envía un mensaje oculto al sistema con las respuestas para que la IA continúe.
-    - Reactiva el input principal.
+### Phase 0: Intro & Anamnesis
+1. Say "Hola".
+2. Agent should ask 3 specific questions (Reason, Impact, Expectation) one by one.
+3. Answer them.
 
-### 3. Backend `save_test.js`
-- Nueva función Netlify (`/.netlify/functions/save_test`) para guardar los resultados de los tests.
-- Guarda: `testId`, `answers`, `timestamp`.
+### Phase 1: Measurement (The Test)
+1. Agent should introduce the test **with context** (e.g., "Entiendo que te sientes...").
+2. **Verify**: The test form should appear **AFTER** the agent's message, not replacing it.
+3. Fill and submit the test.
 
-### 4. Prompt de Gemini (`geminiClient.js`)
-- Se actualizó el `SYSTEM_PROMPT` para que la IA use la nueva etiqueta `[ACCION: MOSTRAR_TEST]` en lugar de hacer preguntas en texto plano durante la Fase 1.
+### Phase 2: Intervention (Canvas)
+1. Agent should diagnose and activate Canvas.
+2. **Verify**: Background should show **vibrant, animated blobs** moving fluidly (not static).
+3. **Verify**: The movement should be organic (wavy/floating) and faster than before.
+4. **Verify**: The colors should be distinct and vibrant (e.g., bright Blue/Cyan for Anxiety).
+5. **Verify**: Color palette should have 4 specific colors related to the emotion.
+6. Draw something.
 
-## Cómo Probar
+### Phase 3: Checkout & Reflection
+1. Click "Terminar Dibujo".
+2. **Verify**: Layout changes, palette removed.
+3. Explain your drawing.
 
-1.  Inicia la aplicación (`npm run dev` o `netlify dev`).
-2.  Habla con el asistente: "Hola, me siento un poco ansioso".
-3.  Responde las preguntas de la Fase 0 (Anamnesis).
-4.  Cuando el asistente pase a la Fase 1 (Medición), debería aparecer un formulario con botones en lugar de texto.
-5.  Intenta escribir en el chat principal (debería estar bloqueado).
-6.  Completa el formulario y envíalo.
-7.  El asistente debería recibir tus respuestas y proceder a la Fase 2 (Diagnóstico/Canvas).
-8.  Verifica en MongoDB que se haya creado un documento en la colección `test_results`.
+### Phase 4: Re-evaluation (Optional)
+1. Agent should **ASK** if you want to take the test again.
+2. Say "Sí".
+3. **Verify**: The test form appears.
+4. Submit and finish.

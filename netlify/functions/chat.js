@@ -20,25 +20,6 @@ exports.handler = async (event, context) => {
         // Get response from Gemini
         const responseText = await getChatResponse(history || [], message);
 
-        // Save to MongoDB
-        try {
-            const { db } = await connectToDatabase();
-            const chatCollection = db.collection('chats');
-
-            await chatCollection.insertOne({
-                timestamp: new Date(),
-                userMessage: message,
-                assistantResponse: responseText,
-                // We could add a sessionId here if the client sends one
-                metadata: {
-                    detectedState: responseText.includes('[ESTADO:') ? responseText.match(/\[ESTADO: (.*?)\]/)[1] : null
-                }
-            });
-        } catch (dbError) {
-            console.error('Failed to save to MongoDB:', dbError);
-            // We don't fail the request if DB save fails, just log it
-        }
-
         return {
             statusCode: 200,
             body: JSON.stringify({ response: responseText }),
