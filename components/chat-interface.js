@@ -6,6 +6,8 @@ export class ChatInterface extends HTMLElement {
     super();
     this.attachShadow({ mode: 'open' });
     this.history = [];
+    this.accumulatedEmotions = {};
+    this.userAlias = null;
   }
 
   connectedCallback() {
@@ -123,13 +125,44 @@ export class ChatInterface extends HTMLElement {
       cleanResponse = cleanResponse.replace('[ESTADO: BAJA_MOTIVACION]', '');
     }
 
+    // Check for emotion analysis
+    if (responseText.includes('[ANALISIS:')) {
+      const analysisMatch = responseText.match(/\[ANALISIS: ({.*?})\]/);
+      if (analysisMatch && analysisMatch[1]) {
+        try {
+          const emotions = JSON.parse(analysisMatch[1]);
+          this.accumulateEmotions(emotions);
+          // Remove tag from display
+          cleanResponse = cleanResponse.replace(analysisMatch[0], '');
+        } catch (e) {
+          console.error('Error parsing emotion analysis:', e);
+        }
+      }
+    }
+
+    // Check for audio trigger
+    if (responseText.includes('[AUDIO:')) {
+      const audioMatch = responseText.match(/\[AUDIO: (\w+)\]/);
+      if (audioMatch && audioMatch[1]) {
+        const audioTrack = audioMatch[1];
+        this.dispatchEvent(new CustomEvent('play-audio', {
+          detail: { track: audioTrack },
+          bubbles: true,
+          composed: true
+        }));
+        // Remove tag from display
+        cleanResponse = cleanResponse.replace(audioMatch[0], '');
+      }
+    }
+
     // Check for canvas action
     if (responseText.includes('[ACCION: MOSTRAR_CANVAS]')) {
       let colors = [];
       let guide = null;
 
       // Extract colors
-      const colorMatch = responseText.match(/\[COLORES: (.*?)\]/);
+      // Match [COLORES: [...]] - handle nested array brackets
+      const colorMatch = responseText.match(/\[COLORES: (\[.*?\])\]/);
       if (colorMatch) {
         try {
           colors = JSON.parse(colorMatch[1]);
@@ -151,6 +184,21 @@ export class ChatInterface extends HTMLElement {
         bubbles: true, composed: true
       }));
       cleanResponse = cleanResponse.replace('[ACCION: MOSTRAR_CANVAS]', '');
+    }
+
+    // Check for session end
+    if (responseText.includes('[ACCION: FINALIZAR_SESION]')) {
+      cleanResponse = cleanResponse.replace('[ACCION: FINALIZAR_SESION]', '');
+      // Save final emotions before ending
+      this.saveEmotionsToBackend();
+
+      // Dispatch event to end session
+      setTimeout(() => {
+        this.dispatchEvent(new CustomEvent('session-complete', {
+          bubbles: true,
+          composed: true
+        }));
+      }, 2000); // Give user time to read goodbye message
     }
 
     // Check for test action (Standard Tag)
@@ -180,6 +228,39 @@ export class ChatInterface extends HTMLElement {
     // Update history
     this.history.push({ role: 'user', parts: [{ text: this.lastUserMessage }] });
     this.history.push({ role: 'model', parts: [{ text: responseText }] });
+  }
+
+  accumulateEmotions(newEmotions) {
+    // Initialize if empty
+    if (Object.keys(this.accumulatedEmotions).length === 0) {
+      this.accumulatedEmotions = newEmotions;
+    } else {
+      // Average out the emotions
+      for (const [emotion, value] of Object.entries(newEmotions)) {
+        if (this.accumulatedEmotions[emotion]) {
+          this.accumulatedEmotions[emotion] = Math.round((this.accumulatedEmotions[emotion] + value) / 2);
+        } else {
+          this.accumulatedEmotions[emotion] = value;
+        }
+      }
+    }
+  }
+
+  async saveEmotionsToBackend() {
+    if (!this.userAlias) return;
+
+    try {
+      await fetch('/.netlify/functions/save_emotions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          alias: this.userAlias,
+          emotions: this.accumulatedEmotions
+        })
+      });
+    } catch (error) {
+      console.error('Error saving emotions:', error);
+    }
   }
 
   addMessage(role, text) {

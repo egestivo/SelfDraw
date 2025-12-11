@@ -2,17 +2,65 @@ import './chat-interface.js';
 import './drawing-canvas.js';
 import './color-palette.js';
 import './ambient-background.js';
+import './welcome-screen.js';
+import './end-screen.js';
+import './audio-player.js';
 
 export class AppRoot extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
+    this.currentScreen = 'welcome';
+    this.userAlias = '';
   }
 
   connectedCallback() {
     this.render();
     this.addEventListener('state-change', this.handleStateChange.bind(this));
     this.addEventListener('show-canvas', this.handleShowCanvas.bind(this));
+    this.addEventListener('start-session', this.handleStartSession.bind(this));
+    this.addEventListener('finish-session', this.handleFinishSession.bind(this));
+    this.addEventListener('new-session', this.handleNewSession.bind(this));
+  }
+
+  handleStartSession(e) {
+    this.userAlias = e.detail.alias;
+    this.currentScreen = 'chat';
+    this.updateScreen();
+  }
+
+  handleFinishSession() {
+    // Close the window or redirect
+    window.close();
+  }
+
+  handleNewSession() {
+    this.currentScreen = 'welcome';
+    this.userAlias = '';
+    this.updateScreen();
+  }
+
+  updateScreen() {
+    const mainContent = this.shadowRoot.querySelector('.main-content');
+    mainContent.innerHTML = '';
+
+    if (this.currentScreen === 'welcome') {
+      const welcomeScreen = document.createElement('welcome-screen');
+      mainContent.appendChild(welcomeScreen);
+    } else if (this.currentScreen === 'chat') {
+      const chatInterface = document.createElement('chat-interface');
+      chatInterface.userAlias = this.userAlias; // Pass the alias
+      mainContent.appendChild(chatInterface);
+
+      // Listen for session end from chat
+      chatInterface.addEventListener('session-complete', () => {
+        this.currentScreen = 'end';
+        this.updateScreen();
+      });
+    } else if (this.currentScreen === 'end') {
+      const endScreen = document.createElement('end-screen');
+      mainContent.appendChild(endScreen);
+    }
   }
 
   handleStateChange(e) {
@@ -232,12 +280,13 @@ export class AppRoot extends HTMLElement {
       </style>
       <div id="app-container">
         <ambient-background></ambient-background>
+        <audio-player></audio-player>
         
         <div class="main-content">
-          <chat-interface></chat-interface>
         </div>
       </div>
     `;
+    this.updateScreen();
   }
 }
 
