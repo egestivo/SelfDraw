@@ -1,12 +1,11 @@
+import './welcome-screen.js';
 import './chat-interface.js';
 import './drawing-canvas.js';
 import './color-palette.js';
-import './ambient-background.js';
-import './welcome-screen.js';
 import './end-screen.js';
 import './audio-player.js';
 
-export class AppRoot extends HTMLElement {
+class AppRoot extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
@@ -21,6 +20,7 @@ export class AppRoot extends HTMLElement {
     this.addEventListener('start-session', this.handleStartSession.bind(this));
     this.addEventListener('finish-session', this.handleFinishSession.bind(this));
     this.addEventListener('new-session', this.handleNewSession.bind(this));
+    this.addEventListener('update-theme-colors', this.handleThemeColors.bind(this));
   }
 
   handleStartSession(e) {
@@ -79,43 +79,67 @@ export class AppRoot extends HTMLElement {
     }
   }
 
+  handleThemeColors(e) {
+    const { colors } = e.detail;
+    if (colors && colors.length >= 4) {
+      const container = this.shadowRoot.getElementById('app-container');
+      // Apply colors to CSS variables
+      container.style.setProperty('--primary-color', colors[0]);
+      container.style.setProperty('--bg-color-1', colors[1]);
+      container.style.setProperty('--bg-color-2', colors[2]);
+      container.style.setProperty('--accent-color', colors[3]);
+    }
+  }
+
   handleShowCanvas(e) {
     const { colors, guide } = e.detail;
     const content = this.shadowRoot.querySelector('.main-content');
     const chatInterface = this.shadowRoot.querySelector('chat-interface');
 
+    // 0. Auto-play Audio
+    const audioPlayer = this.shadowRoot.querySelector('audio-player');
+    if (audioPlayer && !audioPlayer.isPlaying) {
+      audioPlayer.togglePlay();
+    }
+
     // 1. Change Layout
     content.classList.add('with-canvas');
 
-    // 2. Minimize Chat
-    chatInterface.classList.add('minimized');
+    // 2. Hide Chat completely
+    chatInterface.style.display = 'none';
 
-    // 3. Create Left Column Container (for Chat + Palette)
-    // We need to restructure the DOM slightly. 
-    // Current: .main-content > chat-interface
-    // Target: .main-content > .left-col (chat + palette) + .right-col (canvas)
-
-    // Create containers
+    // 3. Create Columns
     const leftCol = document.createElement('div');
-    leftCol.className = 'left-col';
+    leftCol.className = 'left-col tools-sidebar';
+    leftCol.innerHTML = `
+        <h3>Herramientas</h3>
+        <div class="tools-grid">
+            <button id="brushBtn" class="tool-btn active" title="Pincel">🖌️</button>
+            <button id="eraserBtn" class="tool-btn" title="Borrador">🧹</button>
+            <button id="fillBtn" class="tool-btn" title="Relleno">🪣</button>
+            <button id="clearBtn" class="tool-btn" title="Limpiar">🗑️</button>
+        </div>
+        <div class="slider-container">
+            <label>Tamaño</label>
+            <input type="range" id="sizeSlider" min="1" max="20" value="3">
+        </div>
+        <div id="palette-container"></div>
+        <button id="finishBtn" class="finish-btn">Terminar Dibujo</button>
+    `;
 
     const rightCol = document.createElement('div');
-    rightCol.className = 'right-col';
-
-    // Move chat to left col
-    chatInterface.remove();
-    leftCol.appendChild(chatInterface);
-
-    // Create Palette and add to left col
-    const palette = document.createElement('color-palette');
-    if (colors && colors.length > 0) {
-      palette.setAttribute('colors', JSON.stringify(colors));
-    }
-    leftCol.appendChild(palette);
+    rightCol.className = 'right-col canvas-area';
 
     // Create Canvas and add to right col
     const canvas = document.createElement('drawing-canvas');
     rightCol.appendChild(canvas);
+
+    // Create Palette and add to left col container
+    const palette = document.createElement('color-palette');
+    if (colors && colors.length > 0) {
+      palette.setAttribute('colors', JSON.stringify(colors));
+    }
+    leftCol.querySelector('#palette-container').appendChild(palette);
 
     // Append new cols to main content
     content.appendChild(leftCol);
@@ -124,40 +148,52 @@ export class AppRoot extends HTMLElement {
     // Wire up events
     palette.addEventListener('color-selected', (evt) => {
       canvas.setColor(evt.detail.color);
+      canvas.setTool('brush'); // Switch back to brush on color select
+      this.updateActiveTool(leftCol, 'brushBtn');
+    });
+
+    // Tool Buttons Logic
+    const tools = ['brush', 'eraser', 'fill'];
+    tools.forEach(tool => {
+      leftCol.querySelector(`#${tool}Btn`).addEventListener('click', () => {
+        canvas.setTool(tool);
+        this.updateActiveTool(leftCol, `${tool}Btn`);
+      });
+    });
+
+    leftCol.querySelector('#clearBtn').addEventListener('click', () => canvas.clear());
+
+    leftCol.querySelector('#sizeSlider').addEventListener('input', (e) => {
+      canvas.setSize(parseInt(e.target.value));
     });
 
     // Handle Finish Drawing
-    canvas.addEventListener('finish-drawing', () => {
-      const chat = this.shadowRoot.querySelector('chat-interface');
-      if (chat) {
-        chat.sendSystemMessage("[SISTEMA: El usuario ha presionado 'Terminar Dibujo'. Inicia la Fase 4: Checkout.]");
-        // Restore chat size
-        chat.classList.remove('minimized');
-      }
+    leftCol.querySelector('#finishBtn').addEventListener('click', () => {
+      // Remove Sidebar and Canvas
+      leftCol.remove();
+      rightCol.remove();
+      content.classList.remove('with-canvas');
 
-      // Remove Palette
-      const palette = this.shadowRoot.querySelector('color-palette');
-      if (palette) palette.remove();
+      // Restore Chat
+      chatInterface.style.display = 'flex';
+      chatInterface.classList.remove('minimized'); // Ensure it's full size
 
-      // Set Canvas to ReadOnly
-      canvas.setReadOnly(true);
-
-      // Adjust Layout to 50/50
-      const leftCol = this.shadowRoot.querySelector('.left-col');
-      const rightCol = this.shadowRoot.querySelector('.right-col');
-      if (leftCol && rightCol) {
-        leftCol.style.flex = '1';
-        rightCol.style.flex = '1';
-      }
+      // Trigger Test Phase
+      chatInterface.sendSystemMessage("[SISTEMA: El usuario ha presionado 'Terminar Dibujo'. Inicia la Fase 2: Test.]");
     });
 
     // Render guide if exists
-    // We need to wait for canvas to be connected and resized
     if (guide) {
       setTimeout(() => {
         canvas.renderGuide(guide);
       }, 100);
     }
+  }
+
+  updateActiveTool(container, activeId) {
+    container.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+    const btn = container.querySelector(`#${activeId}`);
+    if (btn) btn.classList.add('active');
   }
 
   updateColors(primary, bg1, bg2) {
@@ -177,8 +213,10 @@ export class AppRoot extends HTMLElement {
           margin: 0;
           font-family: 'Inter', system-ui, sans-serif;
           --primary-color: var(--current-primary, #007bff);
+          --accent-color: var(--current-accent, #00d2ff);
           --bg-color-1: #f5f7fa;
           --bg-color-2: #c3cfe2;
+          --glow-color: rgba(0, 123, 255, 0.5);
         }
         @import url('assets/css/themes.css');
 
@@ -194,22 +232,23 @@ export class AppRoot extends HTMLElement {
           overflow: hidden;
         }
         
-        /* NeuroArchitecture Background Blobs */
+        /* NeuroArchitecture Background Blobs - Vivid & Animated */
         .blob {
           position: absolute;
           border-radius: 50%;
-          filter: blur(80px);
-          opacity: 0.6;
+          filter: blur(60px);
+          opacity: 0.8;
           z-index: 0;
           transition: background 2s ease, transform 10s ease;
           animation: float 20s infinite alternate;
+          mix-blend-mode: multiply;
         }
         
         .blob-1 {
           top: -10%;
           left: -10%;
-          width: 50vw;
-          height: 50vw;
+          width: 60vw;
+          height: 60vw;
           background: var(--bg-color-2);
           animation-delay: 0s;
         }
@@ -217,10 +256,10 @@ export class AppRoot extends HTMLElement {
         .blob-2 {
           bottom: -10%;
           right: -10%;
-          width: 60vw;
-          height: 60vw;
+          width: 70vw;
+          height: 70vw;
           background: var(--primary-color);
-          opacity: 0.2;
+          opacity: 0.4;
           animation-delay: -5s;
           animation-direction: alternate-reverse;
         }
@@ -228,20 +267,23 @@ export class AppRoot extends HTMLElement {
         /* State specific animations */
         .state-anxiety .blob {
           animation-duration: 30s;
+          filter: blur(40px); /* Sharper blobs for anxiety */
         }
         .state-motivation .blob {
-          animation-duration: 10s;
+          animation-duration: 8s;
+          filter: blur(80px); /* Softer blobs for motivation */
         }
 
         @keyframes float {
-          0% { transform: translate(0, 0) scale(1); }
-          100% { transform: translate(30px, 50px) scale(1.1); }
+          0% { transform: translate(0, 0) scale(1) rotate(0deg); }
+          50% { transform: translate(30px, 50px) scale(1.1) rotate(10deg); }
+          100% { transform: translate(-20px, 20px) scale(0.9) rotate(-5deg); }
         }
 
         .main-content {
           width: 100%;
-          max-width: 800px;
-          height: 80vh;
+          max-width: 900px;
+          height: 85vh;
           display: flex; /* Default flex for single column */
           flex-direction: column;
           gap: 20px;
@@ -252,41 +294,87 @@ export class AppRoot extends HTMLElement {
         
         /* Canvas Layout (Split Screen) */
         .main-content.with-canvas {
-           max-width: 1200px;
+           max-width: 1600px; /* Wider for canvas */
            flex-direction: row; /* Switch to row */
+           height: 95vh;
         }
         
         .left-col {
-          flex: 4; /* col-4 */
+          flex: 3; /* col-3 */
           display: flex;
           flex-direction: column;
           gap: 20px;
+          background: rgba(255, 255, 255, 0.9);
+          backdrop-filter: blur(15px);
+          padding: 20px;
+          border-radius: 20px;
+          box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          /* Glow Effect */
+          box-shadow: 0 0 15px var(--glow-color);
+          transition: box-shadow 0.5s ease;
         }
         
         .right-col {
-          flex: 8; /* col-8 */
+          flex: 9; /* col-9 */
           display: flex;
           flex-direction: column;
+          border-radius: 20px;
+          overflow: hidden;
+          /* Glow Effect */
+          box-shadow: 0 0 20px var(--glow-color);
+          transition: box-shadow 0.5s ease;
         }
         
         chat-interface {
            flex: 1;
+           border-radius: 20px;
+           /* Glow Effect for Chat */
+           box-shadow: 0 0 15px var(--glow-color);
         }
         
         /* Ensure canvas fills right col */
         drawing-canvas {
           flex: 1;
         }
+
+        /* Tool Sidebar Styles */
+        .tools-sidebar h3 { margin-top: 0; color: #333; }
+        .tools-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .tool-btn {
+            padding: 12px; border: none; border-radius: 12px; background: #f0f0f0; cursor: pointer; font-size: 1.8rem;
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .tool-btn:hover { transform: translateY(-2px); }
+        .tool-btn.active { 
+            background: var(--primary-color); 
+            color: white; 
+            box-shadow: 0 4px 10px var(--glow-color);
+        }
+        .slider-container { margin-bottom: 20px; }
+        .slider-container input { width: 100%; accent-color: var(--primary-color); }
+        .finish-btn {
+            margin-top: auto; padding: 16px; background: #28a745; color: white; border: none; border-radius: 16px;
+            font-weight: 800; cursor: pointer; font-size: 1.1rem; letter-spacing: 0.5px;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4);
+            transition: all 0.3s;
+        }
+        .finish-btn:hover { 
+            background: #218838; 
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.6);
+        }
       </style>
       <div id="app-container">
-        <ambient-background></ambient-background>
-        <audio-player></audio-player>
-        
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
         <div class="main-content">
+          <welcome-screen></welcome-screen>
         </div>
+        <audio-player></audio-player>
       </div>
     `;
-    this.updateScreen();
   }
 }
 

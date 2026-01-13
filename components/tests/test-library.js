@@ -29,17 +29,5 @@ export const TESTS = {
             { id: "q9", text: "Pensamientos de que estaría mejor muerto/a o de lastimarse de alguna manera", type: "scale", options: [{ label: "Nunca", value: "0" }, { label: "Varios días", value: "1" }, { label: "Más de la mitad de los días", value: "2" }, { label: "Casi todos los días", value: "3" }] }
         ]
     },
-    "sms-6": {
-        id: "sms-6",
-        title: "Escala de Motivación Situacional (SMS-6)",
-        description: "¿Por qué estás realizando esta actividad ahora mismo?",
-        questions: [
-            { id: "q1", text: "Porque creo que esta actividad es interesante", type: "scale", options: [{ label: "Totalmente en desacuerdo", value: "1" }, { label: "En desacuerdo", value: "2" }, { label: "Ligeramente en desacuerdo", value: "3" }, { label: "Ligeramente de acuerdo", value: "4" }, { label: "De acuerdo", value: "5" }, { label: "Totalmente de acuerdo", value: "6" }] },
-            { id: "q2", text: "Porque lo hago por mi propio bien", type: "scale", options: [{ label: "Totalmente en desacuerdo", value: "1" }, { label: "En desacuerdo", value: "2" }, { label: "Ligeramente en desacuerdo", value: "3" }, { label: "Ligeramente de acuerdo", value: "4" }, { label: "De acuerdo", value: "5" }, { label: "Totalmente de acuerdo", value: "6" }] },
-            { id: "q3", text: "Porque se supone que debo hacerlo", type: "scale", options: [{ label: "Totalmente en desacuerdo", value: "1" }, { label: "En desacuerdo", value: "2" }, { label: "Ligeramente en desacuerdo", value: "3" }, { label: "Ligeramente de acuerdo", value: "4" }, { label: "De acuerdo", value: "5" }, { label: "Totalmente de acuerdo", value: "6" }] },
-            { id: "q4", text: "Puede que haya buenas razones, pero personalmente no veo ninguna", type: "scale", options: [{ label: "Totalmente en desacuerdo", value: "1" }, { label: "En desacuerdo", value: "2" }, { label: "Ligeramente en desacuerdo", value: "3" }, { label: "Ligeramente de acuerdo", value: "4" }, { label: "De acuerdo", value: "5" }, { label: "Totalmente de acuerdo", value: "6" }] },
-            { id: "q5", text: "Porque me siento bien cuando hago esta actividad", type: "scale", options: [{ label: "Totalmente en desacuerdo", value: "1" }, { label: "En desacuerdo", value: "2" }, { label: "Ligeramente en desacuerdo", value: "3" }, { label: "Ligeramente de acuerdo", value: "4" }, { label: "De acuerdo", value: "5" }, { label: "Totalmente de acuerdo", value: "6" }] },
-            { id: "q6", text: "Porque es algo que tengo que hacer", type: "scale", options: [{ label: "Totalmente en desacuerdo", value: "1" }, { label: "En desacuerdo", value: "2" }, { label: "Ligeramente en desacuerdo", value: "3" }, { label: "Ligeramente de acuerdo", value: "4" }, { label: "De acuerdo", value: "5" }, { label: "Totalmente de acuerdo", value: "6" }] }
-        ]
-    }
+
 };

@@ -110,15 +110,18 @@ export class ChatInterface extends HTMLElement {
   }
 
   handleResponse(responseText) {
-    let cleanResponse = responseText;
+    // 1. Strip <response> tags and [TAG: ...] artifacts if present
+    let cleanResponse = responseText.replace(/<\/?response>/g, '');
+    cleanResponse = cleanResponse.replace(/\[TAG:.*?\]/g, ''); // Strip [TAG: ...]
+    let testToRender = null;
 
     // Check for state tags
-    if (responseText.includes('[ESTADO: ALTA_ANSIEDAD]')) {
+    if (cleanResponse.includes('[ESTADO: ALTA_ANSIEDAD]')) {
       this.dispatchEvent(new CustomEvent('state-change', {
         detail: { state: 'anxiety' }, bubbles: true, composed: true
       }));
       cleanResponse = cleanResponse.replace('[ESTADO: ALTA_ANSIEDAD]', '');
-    } else if (responseText.includes('[ESTADO: BAJA_MOTIVACION]')) {
+    } else if (cleanResponse.includes('[ESTADO: BAJA_MOTIVACION]')) {
       this.dispatchEvent(new CustomEvent('state-change', {
         detail: { state: 'motivation' }, bubbles: true, composed: true
       }));
@@ -126,8 +129,8 @@ export class ChatInterface extends HTMLElement {
     }
 
     // Check for emotion analysis
-    if (responseText.includes('[ANALISIS:')) {
-      const analysisMatch = responseText.match(/\[ANALISIS: ({.*?})\]/);
+    if (cleanResponse.includes('[ANALISIS:')) {
+      const analysisMatch = cleanResponse.match(/\[ANALISIS: ({.*?})\]/);
       if (analysisMatch && analysisMatch[1]) {
         try {
           const emotions = JSON.parse(analysisMatch[1]);
@@ -141,8 +144,8 @@ export class ChatInterface extends HTMLElement {
     }
 
     // Check for audio trigger
-    if (responseText.includes('[AUDIO:')) {
-      const audioMatch = responseText.match(/\[AUDIO: (\w+)\]/);
+    if (cleanResponse.includes('[AUDIO:')) {
+      const audioMatch = cleanResponse.match(/\[AUDIO: (\w+)\]/);
       if (audioMatch && audioMatch[1]) {
         const audioTrack = audioMatch[1];
         this.dispatchEvent(new CustomEvent('play-audio', {
@@ -156,22 +159,27 @@ export class ChatInterface extends HTMLElement {
     }
 
     // Check for canvas action
-    if (responseText.includes('[ACCION: MOSTRAR_CANVAS]')) {
+    if (cleanResponse.includes('[ACCION: MOSTRAR_CANVAS]')) {
       let colors = [];
       let guide = null;
 
       // Extract colors
-      // Match [COLORES: [...]] - handle nested array brackets
-      const colorMatch = responseText.match(/\[COLORES: (\[.*?\])\]/);
+      const colorMatch = cleanResponse.match(/\[COLORES: (\[.*?\])\]/);
       if (colorMatch) {
         try {
           colors = JSON.parse(colorMatch[1]);
+          // Dispatch event for UI theming
+          this.dispatchEvent(new CustomEvent('update-theme-colors', {
+            detail: { colors },
+            bubbles: true,
+            composed: true
+          }));
         } catch (e) { console.error('Error parsing colors', e); }
         cleanResponse = cleanResponse.replace(colorMatch[0], '');
       }
 
       // Extract guide
-      const guideMatch = responseText.match(/\[GUIA: (.*?)\]/);
+      const guideMatch = cleanResponse.match(/\[GUIA: (.*?)\]/);
       if (guideMatch) {
         try {
           guide = JSON.parse(guideMatch[1]);
@@ -187,24 +195,32 @@ export class ChatInterface extends HTMLElement {
     }
 
     // Check for session end
-    if (responseText.includes('[ACCION: FINALIZAR_SESION]')) {
+    if (cleanResponse.includes('[ACCION: FINALIZAR_SESION]')) {
       cleanResponse = cleanResponse.replace('[ACCION: FINALIZAR_SESION]', '');
       // Save final emotions before ending
       this.saveEmotionsToBackend();
 
-      // Dispatch event to end session
+      // Dispatch event to end session with 10s delay
       setTimeout(() => {
         this.dispatchEvent(new CustomEvent('session-complete', {
           bubbles: true,
           composed: true
         }));
-      }, 2000); // Give user time to read goodbye message
+      }, 10000); // 10 seconds delay
     }
 
-    // Check for test action (Standard Tag)
-    let testToRender = null;
-    if (responseText.includes('[ACCION: MOSTRAR_TEST]')) {
-      const testMatch = responseText.match(/\[TEST: ([\s\S]*?)\]/);
+    // Check for session restart
+    if (cleanResponse.includes('[ACCION: REINICIAR_SESION]')) {
+      cleanResponse = cleanResponse.replace('[ACCION: REINICIAR_SESION]', '');
+      this.dispatchEvent(new CustomEvent('new-session', {
+        bubbles: true,
+        composed: true
+      }));
+    }
+
+    // Check for test action
+    if (cleanResponse.includes('[ACCION: MOSTRAR_TEST]')) {
+      const testMatch = cleanResponse.match(/\[TEST: ([\s\S]*?)\]/);
       if (testMatch) {
         const testContent = testMatch[1].trim();
         if (TESTS[testContent.toLowerCase()]) {
@@ -249,13 +265,18 @@ export class ChatInterface extends HTMLElement {
   async saveEmotionsToBackend() {
     if (!this.userAlias) return;
 
+    // Ensure mandatory emotions exist
+    const finalEmotions = { ...this.accumulatedEmotions };
+    if (!finalEmotions['Ansiedad']) finalEmotions['Ansiedad'] = 0;
+    if (!finalEmotions['Motivacion']) finalEmotions['Motivacion'] = 0;
+
     try {
       await fetch('/.netlify/functions/save_emotions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           alias: this.userAlias,
-          emotions: this.accumulatedEmotions
+          emotions: finalEmotions
         })
       });
     } catch (error) {
