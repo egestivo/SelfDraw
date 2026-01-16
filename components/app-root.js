@@ -11,10 +11,27 @@ class AppRoot extends HTMLElement {
     this.attachShadow({ mode: 'open' });
     this.currentScreen = 'welcome';
     this.userAlias = '';
+    this.enableMusic = true; // Default to true
   }
 
   connectedCallback() {
     this.render();
+    this.loadConfig();
+    this.setupEvents();
+  }
+
+  async loadConfig() {
+    try {
+      const response = await fetch('/.netlify/functions/config');
+      const data = await response.json();
+      this.enableMusic = data.enableMusic;
+      console.log('Music enabled:', this.enableMusic);
+    } catch (e) {
+      console.error('Failed to load config:', e);
+    }
+  }
+
+  setupEvents() {
     this.addEventListener('state-change', this.handleStateChange.bind(this));
     this.addEventListener('show-canvas', this.handleShowCanvas.bind(this));
     this.addEventListener('start-session', this.handleStartSession.bind(this));
@@ -98,7 +115,7 @@ class AppRoot extends HTMLElement {
 
     // 0. Show and Auto-play Audio (Only in Phase 1)
     const audioPlayer = this.shadowRoot.querySelector('audio-player');
-    if (audioPlayer) {
+    if (audioPlayer && this.enableMusic) {
       audioPlayer.style.display = 'block'; // Show player
       if (!audioPlayer.isPlaying) {
         audioPlayer.togglePlay();
