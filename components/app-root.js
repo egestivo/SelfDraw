@@ -134,10 +134,22 @@ class AppRoot extends HTMLElement {
     leftCol.innerHTML = `
         <h3>Herramientas</h3>
         <div class="tools-grid">
-            <button id="brushBtn" class="tool-btn active" title="Pincel">🖌️</button>
-            <button id="eraserBtn" class="tool-btn" title="Borrador">🧹</button>
-            <button id="fillBtn" class="tool-btn" title="Relleno">🧺</button>
-            <button id="clearBtn" class="tool-btn" title="Limpiar">🗑️</button>
+            <div class="tool-item">
+                <span class="tool-label">Pincel</span>
+                <button id="brushBtn" class="tool-btn active" title="Pincel">🖌️</button>
+            </div>
+            <div class="tool-item">
+                <span class="tool-label">Borrador</span>
+                <button id="eraserBtn" class="tool-btn" title="Borrador">🧹</button>
+            </div>
+            <div class="tool-item">
+                <span class="tool-label">Relleno</span>
+                <button id="fillBtn" class="tool-btn" title="Relleno">🧺</button>
+            </div>
+            <div class="tool-item">
+                <span class="tool-label">Borrar Todo</span>
+                <button id="clearBtn" class="tool-btn" title="Limpiar">🗑️</button>
+            </div>
         </div>
         <div class="slider-container">
             <label>Tamaño</label>
@@ -371,8 +383,10 @@ class AppRoot extends HTMLElement {
         }
 
         /* Tool Sidebar Styles */
-        .tools-sidebar h3 { margin-top: 0; color: #1a1a1a; font-weight: 700; font-size: 1.2rem; margin-bottom: 10px; }
-        .tools-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 15px; } /* 4 cols for buttons */
+        .tools-sidebar h3 { margin-top: 0; color: #1a1a1a; font-weight: 700; font-size: 1.2rem; margin-bottom: 15px; text-align: center; }
+        .tools-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px; } 
+        .tool-item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .tool-label { font-size: 0.9rem; font-weight: 600; color: #444; }
         .tool-btn {
             padding: 8px; border: none; border-radius: 10px; background: #f0f0f0; cursor: pointer; font-size: 1.4rem; /* Smaller buttons */
             transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
