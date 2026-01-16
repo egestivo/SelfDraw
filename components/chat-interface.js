@@ -84,11 +84,18 @@ export class ChatInterface extends HTMLElement {
       }
 
       // Remove test form
-      const testContainer = this.shadowRoot.querySelector('.test-container');
-      if (testContainer) {
-        testContainer.remove();
+      const testForm = this.shadowRoot.querySelector('test-form');
+      if (testForm) {
+        testForm.remove();
       }
       this.toggleInput(true);
+
+      // Save to database
+      fetch('/.netlify/functions/save_test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ testId, answers })
+      }).catch(err => console.error('Error saving test:', err));
 
       // Send system message to AI with results
       const systemMsg = `[SISTEMA: El usuario ha completado el test ${testId}. Puntaje: ${score}. Interpretación: ${interpretation}. Respuestas: ${JSON.stringify(answers)}]`;
@@ -218,6 +225,8 @@ export class ChatInterface extends HTMLElement {
     // Check for session restart
     if (cleanResponse.includes('[ACCION: REINICIAR_SESION]')) {
       cleanResponse = cleanResponse.replace('[ACCION: REINICIAR_SESION]', '');
+      // Save emotions before restarting
+      this.saveEmotionsToBackend();
       this.dispatchEvent(new CustomEvent('new-session', {
         bubbles: true,
         composed: true
@@ -271,10 +280,22 @@ export class ChatInterface extends HTMLElement {
   async saveEmotionsToBackend() {
     if (!this.userAlias) return;
 
-    // Ensure mandatory emotions exist
-    const finalEmotions = { ...this.accumulatedEmotions };
-    if (!finalEmotions['Ansiedad']) finalEmotions['Ansiedad'] = 0;
-    if (!finalEmotions['Motivacion']) finalEmotions['Motivacion'] = 0;
+    // Filter to keep only 4 emotions: Ansiedad, Motivacion, and the top 2 others
+    const allEmotions = { ...this.accumulatedEmotions };
+    const finalEmotions = {};
+
+    // 1. Mandatory
+    finalEmotions['Ansiedad'] = allEmotions['Ansiedad'] || 0;
+    finalEmotions['Motivacion'] = allEmotions['Motivacion'] || 0;
+
+    // 2. Get others and sort by value to find the top 2
+    const others = Object.entries(allEmotions)
+      .filter(([key]) => key !== 'Ansiedad' && key !== 'Motivacion')
+      .sort((a, b) => b[1] - a[1]); // Sort descending
+
+    // 3. Take top 2 dynamic emotions
+    if (others[0]) finalEmotions[others[0][0]] = others[0][1];
+    if (others[1]) finalEmotions[others[1][0]] = others[1][1];
 
     try {
       await fetch('/.netlify/functions/save_emotions', {
