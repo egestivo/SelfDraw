@@ -138,6 +138,8 @@ export class ChatInterface extends HTMLElement {
     cleanResponse = cleanResponse.replace(/\[ESTADO:.*?\]/g, '');
     // Remove [CORRECCIÓN: ...] artifacts
     cleanResponse = cleanResponse.replace(/\[CORRECCIÓN:.*?\]/g, '');
+    // Remove [ACCION: ...] artifacts (general filter)
+    cleanResponse = cleanResponse.replace(/\[ACCION:.*?\]/g, '');
     // Remove XML tags like <response>
     cleanResponse = cleanResponse.replace(/<[^>]+>/g, '');
 
@@ -172,12 +174,12 @@ export class ChatInterface extends HTMLElement {
     }
 
     // Check for canvas action
-    if (cleanResponse.includes('[ACCION: MOSTRAR_CANVAS]')) {
+    if (responseText.includes('[ACCION: MOSTRAR_CANVAS]')) {
       let colors = [];
       let guide = null;
 
       // Extract colors
-      const colorMatch = cleanResponse.match(/\[COLORES: (\[.*?\])\]/);
+      const colorMatch = responseText.match(/\[COLORES: (\[.*?\])\]/);
       if (colorMatch) {
         try {
           colors = JSON.parse(colorMatch[1]);
@@ -188,28 +190,24 @@ export class ChatInterface extends HTMLElement {
             composed: true
           }));
         } catch (e) { console.error('Error parsing colors', e); }
-        cleanResponse = cleanResponse.replace(colorMatch[0], '');
       }
 
       // Extract guide
-      const guideMatch = cleanResponse.match(/\[GUIA: (.*?)\]/);
+      const guideMatch = responseText.match(/\[GUIA: (.*?)\]/);
       if (guideMatch) {
         try {
           guide = JSON.parse(guideMatch[1]);
         } catch (e) { console.error('Error parsing guide', e); }
-        cleanResponse = cleanResponse.replace(guideMatch[0], '');
       }
 
       this.dispatchEvent(new CustomEvent('show-canvas', {
         detail: { colors, guide },
         bubbles: true, composed: true
       }));
-      cleanResponse = cleanResponse.replace('[ACCION: MOSTRAR_CANVAS]', '');
     }
 
     // Check for session end
-    if (cleanResponse.includes('[ACCION: FINALIZAR_SESION]')) {
-      cleanResponse = cleanResponse.replace('[ACCION: FINALIZAR_SESION]', '');
+    if (responseText.includes('[ACCION: FINALIZAR_SESION]')) {
       // Save final emotions before ending
       this.saveEmotionsToBackend();
 
@@ -223,8 +221,7 @@ export class ChatInterface extends HTMLElement {
     }
 
     // Check for session restart
-    if (cleanResponse.includes('[ACCION: REINICIAR_SESION]')) {
-      cleanResponse = cleanResponse.replace('[ACCION: REINICIAR_SESION]', '');
+    if (responseText.includes('[ACCION: REINICIAR_SESION]')) {
       // Save emotions before restarting
       this.saveEmotionsToBackend();
       this.dispatchEvent(new CustomEvent('new-session', {
@@ -234,16 +231,14 @@ export class ChatInterface extends HTMLElement {
     }
 
     // Check for test action
-    if (cleanResponse.includes('[ACCION: MOSTRAR_TEST]')) {
-      const testMatch = cleanResponse.match(/\[TEST: ([\s\S]*?)\]/);
+    if (responseText.includes('[ACCION: MOSTRAR_TEST]')) {
+      const testMatch = responseText.match(/\[TEST: ([\s\S]*?)\]/);
       if (testMatch) {
         const testContent = testMatch[1].trim();
         if (TESTS[testContent.toLowerCase()]) {
           testToRender = TESTS[testContent.toLowerCase()];
         }
-        cleanResponse = cleanResponse.replace(testMatch[0], '');
       }
-      cleanResponse = cleanResponse.replace('[ACCION: MOSTRAR_TEST]', '');
     }
 
     // Add the cleaned text message FIRST

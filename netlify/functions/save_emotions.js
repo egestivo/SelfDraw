@@ -6,7 +6,7 @@ const clientPromise = mongoClient.connect();
 
 const handler = async (event) => {
     try {
-        const database = (await clientPromise).db(process.env.MONGODB_DATABASE);
+        const database = (await clientPromise).db();
         const collection = database.collection("UserEmotions");
 
         const data = JSON.parse(event.body);
