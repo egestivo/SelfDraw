@@ -96,10 +96,13 @@ class AppRoot extends HTMLElement {
     const content = this.shadowRoot.querySelector('.main-content');
     const chatInterface = this.shadowRoot.querySelector('chat-interface');
 
-    // 0. Auto-play Audio
+    // 0. Show and Auto-play Audio (Only in Phase 1)
     const audioPlayer = this.shadowRoot.querySelector('audio-player');
-    if (audioPlayer && !audioPlayer.isPlaying) {
-      audioPlayer.togglePlay();
+    if (audioPlayer) {
+      audioPlayer.style.display = 'block'; // Show player
+      if (!audioPlayer.isPlaying) {
+        audioPlayer.togglePlay();
+      }
     }
 
     // 1. Change Layout
@@ -116,7 +119,7 @@ class AppRoot extends HTMLElement {
         <div class="tools-grid">
             <button id="brushBtn" class="tool-btn active" title="Pincel">🖌️</button>
             <button id="eraserBtn" class="tool-btn" title="Borrador">🧹</button>
-            <button id="fillBtn" class="tool-btn" title="Relleno">🪣</button>
+            <button id="fillBtn" class="tool-btn" title="Relleno">🧺</button>
             <button id="clearBtn" class="tool-btn" title="Limpiar">🗑️</button>
         </div>
         <div class="slider-container">
@@ -148,8 +151,8 @@ class AppRoot extends HTMLElement {
     // Wire up events
     palette.addEventListener('color-selected', (evt) => {
       canvas.setColor(evt.detail.color);
-      canvas.setTool('brush'); // Switch back to brush on color select
-      this.updateActiveTool(leftCol, 'brushBtn');
+      // REMOVED: canvas.setTool('brush'); - Keep current tool
+      // REMOVED: this.updateActiveTool(leftCol, 'brushBtn');
     });
 
     // Tool Buttons Logic
@@ -206,19 +209,22 @@ class AppRoot extends HTMLElement {
   render() {
     this.shadowRoot.innerHTML = `
       <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap');
+        @import url('assets/css/themes.css');
+        
         :host {
           display: block;
           height: 100vh;
           width: 100vw;
           margin: 0;
-          font-family: 'Inter', system-ui, sans-serif;
+          font-family: 'Outfit', sans-serif; /* Updated Font */
           --primary-color: var(--current-primary, #007bff);
           --accent-color: var(--current-accent, #00d2ff);
           --bg-color-1: #f5f7fa;
           --bg-color-2: #c3cfe2;
           --glow-color: rgba(0, 123, 255, 0.5);
+          --text-color: #1a1a1a; /* High contrast text */
         }
-        @import url('assets/css/themes.css');
 
         #app-container {
           height: 100%;
@@ -230,6 +236,7 @@ class AppRoot extends HTMLElement {
           transition: background 2s ease;
           position: relative;
           overflow: hidden;
+          color: var(--text-color);
         }
         
         /* NeuroArchitecture Background Blobs - Vivid & Animated */
@@ -290,46 +297,49 @@ class AppRoot extends HTMLElement {
           padding: 20px;
           z-index: 1;
           transition: all 0.5s ease;
+          box-sizing: border-box;
         }
         
         /* Canvas Layout (Split Screen) */
         .main-content.with-canvas {
-           max-width: 1600px; /* Wider for canvas */
+           max-width: 98vw; /* Use almost full width */
+           width: 98vw;
            flex-direction: row; /* Switch to row */
-           height: 95vh;
+           height: 95vh; /* Use almost full height */
+           padding: 10px;
         }
         
         .left-col {
-          flex: 3; /* col-3 */
+          flex: 4; /* 4 cols */
           display: flex;
           flex-direction: column;
-          gap: 20px;
-          background: rgba(255, 255, 255, 0.9);
+          gap: 15px; /* Reduced gap */
+          background: rgba(255, 255, 255, 0.95);
           backdrop-filter: blur(15px);
-          padding: 20px;
+          padding: 15px; /* Reduced padding */
           border-radius: 20px;
           box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
           border: 1px solid rgba(255, 255, 255, 0.18);
-          /* Glow Effect */
           box-shadow: 0 0 15px var(--glow-color);
           transition: box-shadow 0.5s ease;
+          overflow-y: auto; 
+          min-width: 250px;
         }
         
         .right-col {
-          flex: 9; /* col-9 */
+          flex: 8; /* 8 cols */
           display: flex;
           flex-direction: column;
           border-radius: 20px;
           overflow: hidden;
-          /* Glow Effect */
           box-shadow: 0 0 20px var(--glow-color);
           transition: box-shadow 0.5s ease;
+          background: white;
         }
         
         chat-interface {
            flex: 1;
            border-radius: 20px;
-           /* Glow Effect for Chat */
            box-shadow: 0 0 15px var(--glow-color);
         }
         
@@ -337,12 +347,17 @@ class AppRoot extends HTMLElement {
         drawing-canvas {
           flex: 1;
         }
+        
+        /* Audio Player Hidden by Default */
+        audio-player {
+            display: none;
+        }
 
         /* Tool Sidebar Styles */
-        .tools-sidebar h3 { margin-top: 0; color: #333; }
-        .tools-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .tools-sidebar h3 { margin-top: 0; color: #1a1a1a; font-weight: 700; font-size: 1.2rem; margin-bottom: 10px; }
+        .tools-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 15px; } /* 4 cols for buttons */
         .tool-btn {
-            padding: 12px; border: none; border-radius: 12px; background: #f0f0f0; cursor: pointer; font-size: 1.8rem;
+            padding: 8px; border: none; border-radius: 10px; background: #f0f0f0; cursor: pointer; font-size: 1.4rem; /* Smaller buttons */
             transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
@@ -353,12 +368,23 @@ class AppRoot extends HTMLElement {
             box-shadow: 0 4px 10px var(--glow-color);
         }
         .slider-container { margin-bottom: 20px; }
-        .slider-container input { width: 100%; accent-color: var(--primary-color); }
+        .slider-container label { font-weight: 600; color: #333; display: block; margin-bottom: 8px; }
+        .slider-container input { width: 100%; accent-color: var(--primary-color); cursor: pointer; }
+        
         .finish-btn {
-            margin-top: auto; padding: 16px; background: #28a745; color: white; border: none; border-radius: 16px;
-            font-weight: 800; cursor: pointer; font-size: 1.1rem; letter-spacing: 0.5px;
+            margin-top: auto; /* Push to bottom */
+            padding: 16px; 
+            background: #28a745; 
+            color: white; 
+            border: none; 
+            border-radius: 16px;
+            font-weight: 800; 
+            cursor: pointer; 
+            font-size: 1.1rem; 
+            letter-spacing: 0.5px;
             box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4);
             transition: all 0.3s;
+            font-family: 'Outfit', sans-serif;
         }
         .finish-btn:hover { 
             background: #218838; 

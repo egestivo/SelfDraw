@@ -59,25 +59,8 @@ export class DrawingCanvas extends HTMLElement {
         });
         this.canvas.addEventListener('touchend', () => this.stopDrawing());
 
-        // Tools
-        this.shadowRoot.getElementById('brushBtn').addEventListener('click', () => this.setTool('brush'));
-        this.shadowRoot.getElementById('eraserBtn').addEventListener('click', () => this.setTool('eraser'));
-        this.shadowRoot.getElementById('fillBtn').addEventListener('click', () => this.setTool('fill'));
+        // External controls are handled via public methods (setTool, setSize, finish)
 
-        // Size Slider
-        const slider = this.shadowRoot.getElementById('sizeSlider');
-        slider.addEventListener('input', (e) => {
-            this.lineWidth = parseInt(e.target.value);
-            this.ctx.lineWidth = this.lineWidth;
-        });
-
-        // Finish Button
-        this.shadowRoot.getElementById('finishBtn').addEventListener('click', () => {
-            this.dispatchEvent(new CustomEvent('finish-drawing', {
-                bubbles: true,
-                composed: true
-            }));
-        });
     }
 
     setTool(tool) {
@@ -122,6 +105,8 @@ export class DrawingCanvas extends HTMLElement {
                 this.ctx.globalCompositeOperation = 'destination-out';
             } else {
                 this.ctx.globalCompositeOperation = 'source-over';
+                this.ctx.lineCap = 'round';
+                this.ctx.lineJoin = 'round';
                 this.ctx.strokeStyle = this.color;
             }
         }

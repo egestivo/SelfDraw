@@ -2,7 +2,7 @@ export class ColorPalette extends HTMLElement {
     constructor() {
         super();
         this.attachShadow({ mode: 'open' });
-        this.colors = ['#000000', '#FF0000', '#00FF00', '#0000FF']; // Default
+        this.colors = ['#92467fff', '#c54949ff', '#00FF00', '#0000FF']; // Default
     }
 
     static get observedAttributes() {
